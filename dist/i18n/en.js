@@ -1,0 +1,37 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.en = void 0;
+exports.en = {
+    welcome: '👋 Welcome to *Gojo Homes*!\n\nThe easiest way to *find* and *post* properties in Ethiopia.\n\nWhat would you like to do?',
+    searchBtn: '🔍 Search',
+    postBtn: '📢 Post Property',
+    latestBtn: '🆕 Latest Listings',
+    agenciesBtn: '🏢 Agencies',
+    helpBtn: '❓ Help',
+    cancelBtn: '❌ Cancel',
+    switchLanguageBtn: '🌐 Change Language',
+    languageChanged: '🇬🇧 Language set to English!',
+    searchStep1: '🔍 *Search Properties*\n\nStep 1 of 4 — Enter the *location* you are looking in:\n_(e.g. Bole, CMC, Megenagna)_',
+    searchStep2: '📍 *Location saved!*\n\nStep 2 of 4 — Choose a *property type*:',
+    searchStep3: '🏘 *Type saved!*\n\nStep 3 of 4 — What is your *minimum budget* in ETB?\n_(Numbers only, e.g. 5000)_',
+    searchStep4: '💵 *Min price saved!*\n\nStep 4 of 4 — What is your *maximum budget* in ETB?\n_(Numbers only, e.g. 15000)_',
+    searchSearching: '🔎 Searching...',
+    searchNoResults: '😔 No properties found.',
+    invalidLocation: 'Please enter a valid location.',
+    invalidNumber: 'Please enter a valid number.',
+    postStep1: '📢 *Post a Property*\n\nStep 1 of 8 — What is the *location*?\n_(e.g. Bole, CMC)_',
+    postStep2: '📍 *Location saved!*\n\nStep 2 of 8 — What is the *property type*?',
+    postStep3: '🏘 *Type saved!*\n\nStep 3 of 8 — What is the *price* in ETB?\n_(Numbers only)_',
+    postStep4: '💵 *Price saved!*\n\nStep 4 of 8 — How many *bedrooms*?\n_(Enter 0 if not applicable)_',
+    postStep5: '🛏 *Bedrooms saved!*\n\nStep 5 of 8 — Write a *description*:',
+    postPhoto: '📝 *Description saved!*\n\nStep 6 of 8 — Send *one clear photo* of the property:',
+    postContact: '📸 *Photo saved!*\n\nStep 7 of 8 — What is your *contact phone number*?',
+    postConfirm: '📞 *Contact saved!*\n\nStep 8 of 8 — *Review your listing:*\n\nDoes this look correct?',
+    confirmBtn: '✅ Yes, Publish',
+    postSuccess: '🎉 *Property Published!*\n\nYour listing is now live on the Gojo Homes channel.',
+    bedrooms: 'Bedrooms',
+    price: 'Price',
+    location: 'Location',
+    description: 'Description',
+    contact: 'Contact'
+};

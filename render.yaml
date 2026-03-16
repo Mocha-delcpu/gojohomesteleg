@@ -1,0 +1,19 @@
+services:
+  - type: worker
+    name: gojo-homes-bot
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BOT_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: CHANNEL_IDS
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
