@@ -10,7 +10,15 @@ CREATE TABLE public.agencies (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Create Settings table for bot configuration
+CREATE TABLE public.settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Note: We use RLS (Row Level Security) and enable it for proper security, 
+
 -- but assuming the bot will use a Service Role Key, it can bypass RLS for inserting/reading.
 
 -- Create Properties Table

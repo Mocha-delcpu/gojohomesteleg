@@ -8,6 +8,8 @@ import {
   getPropertyById,
   listAllProperties,
   verifyAgency,
+  setDestinationChannel,
+  getDestinationChannel
 } from '../services/db';
 import { deleteFromChannel } from '../services/channel';
 import { shortId } from '../utils/formatting';
@@ -83,6 +85,30 @@ export const setupAdminCommands = (bot: Telegraf<MyContext>) => {
       logger.info(`Admin ${ctx.from.id} verified agency: ${agencyId}`);
     } else {
       await ctx.reply(`❌ Could not verify agency \`${agencyId}\`. Check if the ID is correct.`, { parse_mode: 'Markdown' });
+    }
+  });
+
+  // ── /setchannel <@channelname> ──────────────────────────────────────────────
+  bot.command('setchannel', async (ctx) => {
+    if (!isAdmin(ctx.from.id)) return ctx.reply('⛔ Unauthorized.');
+
+    const args = ctx.message.text.split(' ');
+    if (args.length < 2) {
+      const current = await getDestinationChannel();
+      return ctx.reply(`Usage: /setchannel <@channelname>\nCurrent channel: ${current}`);
+    }
+
+    const channelId = args[1].trim();
+    if (!channelId.startsWith('@') && !channelId.startsWith('-100')) {
+      return ctx.reply('❌ Channel must start with @ or -100 (for private channels)', { parse_mode: 'Markdown' });
+    }
+
+    const success = await setDestinationChannel(channelId);
+    if (success) {
+      await ctx.reply(`✅ Destination channel updated to \`${channelId}\`! ✔️`, { parse_mode: 'Markdown' });
+      logger.info(`Admin ${ctx.from.id} changed destination channel to: ${channelId}`);
+    } else {
+      await ctx.reply(`❌ Could not update destination channel. Ensure the database 'settings' table exists.`, { parse_mode: 'Markdown' });
     }
   });
 };

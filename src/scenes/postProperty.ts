@@ -103,25 +103,55 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     }
 
     ctx.wizard.state.description = ctx.message.text.trim();
-    await ctx.reply(t.postPhoto, { parse_mode: 'Markdown', ...getCancelMenu(ctx.session?.language) });
+    ctx.wizard.state.photos = [];
+    
+    await ctx.reply('Please upload up to 5 photos of the property. You can select multiple photos at once. Once you have uploaded all your photos, press the *Done ✅* button below.', { 
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [['Done ✅'], [t.cancelBtn]],
+        resize_keyboard: true,
+      }
+    });
     return ctx.wizard.next();
   },
 
   // ── Step 7: Save Photo → Ask Phone ───────────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
-    if (ctx.message && 'text' in ctx.message && (ctx.message.text === t.cancelBtn || ctx.message.text === '❌ Cancel')) return cancelPost(ctx);
+    if (!ctx.message) return;
 
-    if (!ctx.message || !('photo' in ctx.message)) {
-      await ctx.reply('Please upload a *photo* of the property.', { parse_mode: 'Markdown' }); return;
+    if ('text' in ctx.message) {
+      if (ctx.message.text === t.cancelBtn || ctx.message.text === '❌ Cancel') return cancelPost(ctx);
+      if (ctx.message.text === 'Done ✅') {
+        if (!ctx.wizard.state.photos || ctx.wizard.state.photos.length === 0) {
+           await ctx.reply('Please upload at least one photo before pressing Done!');
+           return;
+        }
+        await ctx.reply(t.postContact, { parse_mode: 'Markdown', ...getCancelMenu(ctx.session?.language) });
+        return ctx.wizard.next();
+      }
     }
 
-    // Get the highest-quality version of the photo
-    const photos = ctx.message.photo;
-    ctx.wizard.state.photos = [photos[photos.length - 1].file_id];
+    if ('photo' in ctx.message) {
+      if (!ctx.wizard.state.photos) ctx.wizard.state.photos = [];
+      if (ctx.wizard.state.photos.length >= 5) {
+        await ctx.reply('You can only upload up to 5 photos. Press *Done ✅* to continue.', { parse_mode: 'Markdown' });
+        return;
+      }
+      
+      const photos = ctx.message.photo;
+      ctx.wizard.state.photos.push(photos[photos.length - 1].file_id);
+      
+      // We only reply on the first photo to avoid spam when they upload an album
+      if (ctx.wizard.state.photos.length === 1 && !ctx.message.media_group_id) {
+        await ctx.reply(`Received photo. You can upload up to 4 more, or press *Done ✅* if you are finished.`, { parse_mode: 'Markdown' });
+      } else if (ctx.wizard.state.photos.length === 5) {
+        await ctx.reply('You have reached the limit of 5 photos. Please press *Done ✅* to continue.', { parse_mode: 'Markdown' });
+      }
+      return; // Wait for them to tap Done
+    }
 
-    await ctx.reply(t.postContact, { parse_mode: 'Markdown', ...getCancelMenu(ctx.session?.language) });
-    return ctx.wizard.next();
+    await ctx.reply('Please upload a photo or press *Done ✅*.', { parse_mode: 'Markdown' });
   },
 
   // ── Step 8: Save Phone → Show Summary ───────────────────────────────────

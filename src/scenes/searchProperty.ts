@@ -1,7 +1,7 @@
 import { Scenes, Markup } from 'telegraf';
 import { MyContext } from '../utils/types';
 import { getPropertyTypeMenu, getCancelMenu } from '../utils/menus';
-import { searchProperties } from '../services/db';
+import { searchProperties, getDestinationChannel } from '../services/db';
 import { formatListing, buildSearchLink } from '../utils/formatting';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
@@ -100,9 +100,10 @@ export const searchPropertyWizard = new Scenes.WizardScene<MyContext>(
         const caption = formatListing(property);
         let viewUrl = null;
         
-        // Use the first configured channel for deep linking if channel_message_id exists
+        // Use the configured channel for deep linking if channel_message_id exists
         if (property.channel_message_id) {
-            const primaryChannel = env.CHANNEL_IDS.split(',')[0].trim().replace('@', '');
+            const dest = await getDestinationChannel();
+            const primaryChannel = dest.replace('@', '');
             viewUrl = `https://t.me/${primaryChannel}/${property.channel_message_id}`;
         }
 

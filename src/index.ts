@@ -54,7 +54,8 @@ bot.telegram.setMyCommands([
   { command: 'back', description: '🔙 Go Back / Cancel' },
   { command: 'search', description: '🔍 Search Properties' },
   { command: 'post', description: '📢 Post a Property' },
-  { command: 'latest', description: '🆕 Latest Listings' }
+  { command: 'latest', description: '🆕 Latest Listings' },
+  { command: 'setchannel', description: '📡 Set posting channel (Admin)' }
 ]).catch((err) => logger.error('Failed to set commands:', err));
 
 bot.launch().then(() => {

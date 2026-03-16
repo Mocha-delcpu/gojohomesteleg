@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { logger } from '../utils/logger';
+import { env } from '../config/env';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -199,4 +200,46 @@ export const verifyAgency = async (agencyId: string): Promise<boolean> => {
     return false;
   }
   return true;
+};
+
+// ─── Settings Queries ─────────────────────────────────────────────────────────
+
+/**
+ * Get the destination channel.
+ * Reads from the 'settings' table. Falls back to env.CHANNEL_IDS if not set.
+ */
+export const getDestinationChannel = async (): Promise<string> => {
+  try {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'destination_channel')
+      .maybeSingle();
+      
+    if (error || !data) {
+      return env.CHANNEL_IDS.split(',')[0].trim();
+    }
+    return data.value;
+  } catch (err) {
+    return env.CHANNEL_IDS.split(',')[0].trim();
+  }
+};
+
+/**
+ * Set the destination channel.
+ */
+export const setDestinationChannel = async (channelId: string): Promise<boolean> => {
+  try {
+    const { data } = await supabase.from('settings').select('key').eq('key', 'destination_channel').maybeSingle();
+    if (data) {
+      const { error } = await supabase.from('settings').update({ value: channelId }).eq('key', 'destination_channel');
+      return !error;
+    } else {
+      const { error } = await supabase.from('settings').insert({ key: 'destination_channel', value: channelId });
+      return !error;
+    }
+  } catch (err: any) {
+    logger.error('Error setting destination channel:', err.message);
+    return false;
+  }
 };
