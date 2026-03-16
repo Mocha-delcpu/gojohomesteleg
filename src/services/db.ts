@@ -6,13 +6,16 @@ import { env } from '../config/env';
 
 export interface Property {
   id?: string;
-  property_type: string;
+  user_id: number;
+  user_name?: string;
+  listing_type: 'rent' | 'sale';
   location: string;
+  property_type: string;
   price: number;
   bedrooms: number;
   description: string;
   contact_phone: string;
-  images: string[];
+  photos?: string[];
   agency_id?: string | null;
   channel_message_id?: number | null;
   created_at?: string;
@@ -66,6 +69,7 @@ export const updateChannelMessageId = async (propertyId: string, messageId: numb
  */
 export const searchProperties = async (
   location: string,
+  listingType: 'rent' | 'sale' | 'any',
   propertyType: string,
   minPrice: number,
   maxPrice: number
@@ -74,6 +78,7 @@ export const searchProperties = async (
     .from('properties')
     .select('*')
     .ilike('location', `%${location}%`)
+    .ilike('listing_type', listingType === 'any' ? '%' : listingType)
     .ilike('property_type', propertyType === 'any' ? '%' : propertyType)
     .gte('price', minPrice)
     .lte('price', maxPrice)

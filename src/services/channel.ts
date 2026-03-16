@@ -21,9 +21,9 @@ export const publishToChannel = async (
     
     try {
       let sentMessage: any;
-      if (property.images && property.images.length > 1) {
+      if (property.photos && property.photos.length > 1) {
         // Post as media group for multiple photos
-        const mediaGroup = property.images.map((img, i) => ({
+        const mediaGroup = property.photos.map((img: string, i: number) => ({
           type: 'photo' as const,
           media: img,
           caption: i === 0 ? caption : undefined,
@@ -40,11 +40,11 @@ export const publishToChannel = async (
           reply_markup: buttons,
         });
 
-      } else if (property.images && property.images.length === 1) {
+      } else if (property.photos && property.photos.length === 1) {
         // Post with single photo
         sentMessage = await bot.telegram.sendPhoto(
           channel,
-          property.images[0],
+          property.photos[0],
           {
             caption,
             parse_mode: 'Markdown',

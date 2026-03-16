@@ -35,5 +35,16 @@ export const en: TranslationDictionary = {
   price: 'Price',
   location: 'Location',
   description: 'Description',
-  contact: 'Contact'
+  contact: 'Contact',
+  
+  // Rent vs Sale
+  listingTypePrompt: '📢 *Post a Property*\n\nIs this property for *Rent* or for *Sale*?',
+  rent: 'For Rent',
+  sale: 'For Sale',
+
+  // Location Hierarchy
+  selectRegion: '🗺 *Step 1 of 9 — Location*\n\nPlease select the *Region*:',
+  selectZone: '📍 *Region Saved!*\n\nSelect the *City/Sub-city*:',
+  selectNeighborhood: '🏘 *City/Sub-city Saved!*\n\nSelect the *Specific Neighborhood*:',
+  selectedLocation: '✅ *Location Selected:*',
 };

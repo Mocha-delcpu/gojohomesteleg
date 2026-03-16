@@ -53,8 +53,8 @@ export const setupActionHandlers = (bot: Telegraf<MyContext>) => {
         ? `https://t.me/${primaryChannel}/${p.channel_message_id}`
         : null;
 
-      if (p.images && p.images.length > 0) {
-        await ctx.replyWithPhoto(p.images[0], {
+      if (p.photos && p.photos.length > 0) {
+        await ctx.replyWithPhoto(p.photos[0], {
           caption,
           parse_mode: 'Markdown',
           ...(viewUrl ? { reply_markup: { inline_keyboard: [[{ text: '👀 View Full Listing', url: viewUrl }]] } } : {}),

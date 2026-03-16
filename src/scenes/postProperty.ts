@@ -11,34 +11,171 @@ import { i18n } from '../i18n';
 let _bot: Telegraf;
 export const setBotInstance = (bot: Telegraf) => { _bot = bot; };
 
+import { ETHIOPIA_LOCATIONS } from '../data/locations';
+
+const getRegionsKeyboard = () => {
+  const regions = Object.keys(ETHIOPIA_LOCATIONS);
+  // Break into rows of 2 for better UI
+  const keyboard = [];
+  for (let i = 0; i < regions.length; i += 2) {
+    keyboard.push(regions.slice(i, i + 2));
+  }
+  return keyboard;
+};
+
+const getZonesKeyboard = (region: string) => {
+  const zones = Object.keys(ETHIOPIA_LOCATIONS[region] || {});
+  const keyboard = [];
+  for (let i = 0; i < zones.length; i += 2) {
+    keyboard.push(zones.slice(i, i + 2));
+  }
+  return keyboard;
+};
+
+const getNeighborhoodsKeyboard = (region: string, zone: string) => {
+  const neighborhoods = ETHIOPIA_LOCATIONS[region]?.[zone] || [];
+  const keyboard = [];
+  for (let i = 0; i < neighborhoods.length; i += 2) {
+    keyboard.push(neighborhoods.slice(i, i + 2));
+  }
+  return keyboard;
+};
+
 // ─── Wizard Steps ─────────────────────────────────────────────────────────────
 
 export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
   'POST_PROPERTY_SCENE',
 
-  // ── Step 1: Ask Location ─────────────────────────────────────────────────
+  // ── Step 1: Ask Rent or Sale ─────────────────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
-    await ctx.reply(t.postStep1, { parse_mode: 'Markdown', ...getCancelMenu(ctx.session?.language) });
-    ctx.wizard.state = { photos: [] };
+    ctx.wizard.state = {};
+    
+    await ctx.reply(t.listingTypePrompt, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [[t.rent, t.sale], [t.cancelBtn]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      }
+    });
     return ctx.wizard.next();
   },
 
-  // ── Step 2: Save Location → Ask Type ────────────────────────────────────
+  // ── Step 2: Save Type → Ask Region ───────────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
     if (ctx.message.text === t.cancelBtn || ctx.message.text === '❌ Cancel') return cancelPost(ctx);
-    if (!ctx.message.text.trim()) {
-      await ctx.reply(t.invalidLocation); return;
+    
+    if (ctx.message.text === t.rent) ctx.wizard.state.listing_type = 'rent';
+    else if (ctx.message.text === t.sale) ctx.wizard.state.listing_type = 'sale';
+    else {
+      await ctx.reply(t.listingTypePrompt); return;
     }
 
-    ctx.wizard.state.location = ctx.message.text.trim();
-    await ctx.reply(t.postStep2, { parse_mode: 'Markdown', ...getPropertyTypeMenu() });
+    await ctx.reply(t.selectRegion, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [...getRegionsKeyboard(), [t.cancelBtn]],
+        resize_keyboard: true
+      }
+    });
     return ctx.wizard.next();
   },
 
-  // ── Step 3: Save Type → Ask Price ────────────────────────────────────────
+  // ── Step 3: Save Region → Ask Zone/City ──────────────────────────────────
+  async (ctx) => {
+    const t = i18n.get(ctx.session?.language);
+    if (!ctx.message || !('text' in ctx.message)) return;
+    if (ctx.message.text === t.cancelBtn || ctx.message.text === '❌ Cancel') return cancelPost(ctx);
+
+    const region = ctx.message.text;
+    if (!ETHIOPIA_LOCATIONS[region]) {
+      await ctx.reply('Please select a valid region from the keyboard.'); return;
+    }
+
+    ctx.wizard.state.selectedRegion = region;
+    
+    // Check if region has zones
+    const zones = getZonesKeyboard(region);
+    if (zones.length === 0) {
+      // Edge case: Region has no detailed zones. Set location as Region and skip to property type
+      ctx.wizard.state.location = region;
+      await ctx.reply(t.postStep2, { parse_mode: 'Markdown', ...getPropertyTypeMenu() });
+      ctx.wizard.selectStep(5); // Goto Property Type step
+      return;
+    }
+
+    await ctx.reply(t.selectZone, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [...zones, [t.cancelBtn]],
+        resize_keyboard: true
+      }
+    });
+    return ctx.wizard.next();
+  },
+
+  // ── Step 4: Save Zone → Ask Neighborhood ─────────────────────────────────
+  async (ctx) => {
+    const t = i18n.get(ctx.session?.language);
+    if (!ctx.message || !('text' in ctx.message)) return;
+    if (ctx.message.text === t.cancelBtn || ctx.message.text === '❌ Cancel') return cancelPost(ctx);
+
+    const zone = ctx.message.text;
+    const region = ctx.wizard.state.selectedRegion!;
+    
+    if (!ETHIOPIA_LOCATIONS[region][zone]) {
+      // If user types a custom zone that isn't in our list, we accept it and stop drilling down
+      ctx.wizard.state.location = `${region} - ${zone}`;
+      await ctx.reply(`${t.selectedLocation} ${ctx.wizard.state.location}\n\n${t.postStep2}`, { parse_mode: 'Markdown', ...getPropertyTypeMenu() });
+      ctx.wizard.selectStep(5); // Goto Property Type step
+      return;
+    }
+
+    ctx.wizard.state.selectedZone = zone;
+    
+    const neighborhoods = getNeighborhoodsKeyboard(region, zone);
+    if (neighborhoods.length === 0) {
+      // No deeper hierarchy, save and move on
+      ctx.wizard.state.location = `${region} - ${zone}`;
+      await ctx.reply(`${t.selectedLocation} ${ctx.wizard.state.location}\n\n${t.postStep2}`, { parse_mode: 'Markdown', ...getPropertyTypeMenu() });
+      ctx.wizard.selectStep(5);
+      return;
+    }
+
+    await ctx.reply(t.selectNeighborhood, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        keyboard: [...neighborhoods, ['Skip / Any'], [t.cancelBtn]],
+        resize_keyboard: true
+      }
+    });
+    return ctx.wizard.next();
+  },
+
+  // ── Step 5: Save Neighborhood → Ask Property Type ───────────────────────
+  async (ctx) => {
+    const t = i18n.get(ctx.session?.language);
+    if (!ctx.message || !('text' in ctx.message)) return;
+    if (ctx.message.text === t.cancelBtn || ctx.message.text === '❌ Cancel') return cancelPost(ctx);
+
+    const hood = ctx.message.text;
+    const region = ctx.wizard.state.selectedRegion!;
+    const zone = ctx.wizard.state.selectedZone!;
+
+    if (hood === 'Skip / Any') {
+      ctx.wizard.state.location = `${region} - ${zone}`;
+    } else {
+      ctx.wizard.state.location = `${region} - ${zone} - ${hood}`;
+    }
+
+    await ctx.reply(`${t.selectedLocation} *${ctx.wizard.state.location}*\n\n${t.postStep2}`, { parse_mode: 'Markdown', ...getPropertyTypeMenu() });
+    return ctx.wizard.next();
+  },
+
+  // ── Step 6: Save Type → Ask Price ────────────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -49,12 +186,12 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
       await ctx.reply('Please choose a valid property type.'); return;
     }
 
-    ctx.wizard.state.propertyType = ctx.message.text;
+    ctx.wizard.state.property_type = ctx.message.text;
     await ctx.reply(t.postStep3, { parse_mode: 'Markdown', ...getCancelMenu(ctx.session?.language) });
     return ctx.wizard.next();
   },
 
-  // ── Step 4: Save Price → Ask Bedrooms (or skip for Land) ────────────────
+  // ── Step 7: Save Price → Ask Bedrooms (or skip for Land) ────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -66,10 +203,10 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     }
     ctx.wizard.state.price = price;
 
-    if (ctx.wizard.state.propertyType === 'Land') {
+    if (ctx.wizard.state.property_type === 'Land') {
       ctx.wizard.state.bedrooms = 0;
       await ctx.reply(t.postStep5, { parse_mode: 'Markdown', ...getCancelMenu(ctx.session?.language) });
-      ctx.wizard.selectStep(5); // skip bedrooms
+      ctx.wizard.selectStep(8); // skip bedrooms
       return;
     }
 
@@ -77,7 +214,7 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     return ctx.wizard.next();
   },
 
-  // ── Step 5: Save Bedrooms → Ask Description ──────────────────────────────
+  // ── Step 8: Save Bedrooms → Ask Description ──────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -93,7 +230,7 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     return ctx.wizard.next();
   },
 
-  // ── Step 6: Save Description → Ask Photo ────────────────────────────────
+  // ── Step 9: Save Description → Ask Photo ────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -115,7 +252,7 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     return ctx.wizard.next();
   },
 
-  // ── Step 7: Save Photo → Ask Phone ───────────────────────────────────────
+  // ── Step 10: Save Photo → Ask Phone ───────────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message) return;
@@ -142,19 +279,18 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
       const photos = ctx.message.photo;
       ctx.wizard.state.photos.push(photos[photos.length - 1].file_id);
       
-      // We only reply on the first photo to avoid spam when they upload an album
       if (ctx.wizard.state.photos.length === 1 && !ctx.message.media_group_id) {
         await ctx.reply(`Received photo. You can upload up to 4 more, or press *Done ✅* if you are finished.`, { parse_mode: 'Markdown' });
       } else if (ctx.wizard.state.photos.length === 5) {
         await ctx.reply('You have reached the limit of 5 photos. Please press *Done ✅* to continue.', { parse_mode: 'Markdown' });
       }
-      return; // Wait for them to tap Done
+      return;
     }
 
     await ctx.reply('Please upload a photo or press *Done ✅*.', { parse_mode: 'Markdown' });
   },
 
-  // ── Step 8: Save Phone → Show Summary ───────────────────────────────────
+  // ── Step 11: Save Phone → Show Summary ───────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -164,18 +300,20 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     if (!/^[0-9+\s\-()]{7,15}$/.test(phone)) {
       await ctx.reply('Please enter a valid phone number.'); return;
     }
-    ctx.wizard.state.contactPhone = phone;
+    ctx.wizard.state.contact_phone = phone;
 
     const s = ctx.wizard.state;
+    const typeStr = s.listing_type === 'rent' ? t.rent : t.sale;
     const bedroomLine = s.bedrooms! > 0 ? `\n🛏 *${t.bedrooms}:* ${s.bedrooms}` : '';
     const summary =
       `${t.postConfirm}\n\n` +
+      `📢 *Type:* ${typeStr}\n` +
       `📍 *${t.location}:* ${s.location}\n` +
-      `🏘 *Type:* ${s.propertyType}\n` +
+      `🏘 *Property:* ${s.property_type}\n` +
       `💰 *${t.price}:* ${(s.price!).toLocaleString()} ETB` +
       `${bedroomLine}\n` +
       `📝 *${t.description}:* ${s.description}\n` +
-      `📞 *${t.contact}:* ${s.contactPhone}`;
+      `📞 *${t.contact}:* ${s.contact_phone}`;
 
     await ctx.reply(summary, {
       parse_mode: 'Markdown',
@@ -188,7 +326,7 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
     return ctx.wizard.next();
   },
 
-  // ── Step 9: Confirm → Save & Publish ────────────────────────────────────
+  // ── Step 12: Confirm → Save & Publish ────────────────────────────────────
   async (ctx) => {
     const t = i18n.get(ctx.session?.language);
     if (!ctx.message || !('text' in ctx.message)) return;
@@ -201,31 +339,29 @@ export const postPropertyWizard = new Scenes.WizardScene<MyContext>(
 
     const s = ctx.wizard.state;
     const propertyData = {
-      property_type: s.propertyType!,
+      listing_type: s.listing_type!,
+      property_type: s.property_type!,
       location: s.location!,
       price: s.price!,
       bedrooms: s.bedrooms!,
       description: s.description!,
-      contact_phone: s.contactPhone!,
-      images: s.photos || [],
-      agency_id: null,
-      channel_message_id: null,
+      contact_phone: s.contact_phone!,
+      photos: s.photos || [],
+      user_id: ctx.from?.id || 0,
+      user_name: ctx.from?.first_name || 'Agent',
     };
 
-    // 1. Save to Supabase
     const saved = await insertProperty(propertyData);
     if (!saved) {
       await ctx.reply('❌ Failed to save your listing to the database. Please try again.');
       return ctx.scene.leave();
     }
 
-    // 2. Publish to channel
     const channelMsgId = await publishToChannel(_bot, saved);
     if (channelMsgId) {
       await updateChannelMessageId(saved.id!, channelMsgId);
     }
 
-    // 3. Build viral share link for landlord
     const listingUrl = buildListingLink(saved.id!);
     const shareText = encodeURIComponent(
       `🏠 New listing on Gojo Homes!\n📍 ${saved.location}\n💰 ${saved.price.toLocaleString()} ETB\n\nCheck it out: ${listingUrl}`

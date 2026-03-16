@@ -35,4 +35,13 @@ export interface TranslationDictionary {
   location: string;
   description: string;
   contact: string;
+  // Rent vs Sale
+  listingTypePrompt: string;
+  rent: string;
+  sale: string;
+  // Location Hierarchy
+  selectRegion: string;
+  selectZone: string;
+  selectNeighborhood: string;
+  selectedLocation: string;
 }

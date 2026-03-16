@@ -35,32 +35,35 @@ export const setupStartCommand = (bot: Telegraf<MyContext>) => {
       // @ts-ignore - payload is available in start handler
       const payload: string = ctx.payload || '';
 
-      // ── Deep Link: Pre-filled Search ─────────────────────────────────────
-      // Format: search_<location>_<minPrice>_<maxPrice>_<type>
+      // Format: search_<location>_<listingType>_<minPrice>_<maxPrice>_<type>
       if (payload.startsWith('search_')) {
         const parts = payload.split('_');
-        if (parts.length >= 4) {
+        if (parts.length >= 5) { // Needs at least loc, listingType, min, max, type
           const type = parts[parts.length - 1];
           let minPrice = 0;
           let maxPrice = 0;
+          let listingType: 'rent' | 'sale' | 'any' = 'any';
           let locationParts: string[] = [];
 
-          if (parts.length >= 5 && !isNaN(parseInt(parts[parts.length - 3], 10))) {
+          if (parts.length >= 6 && !isNaN(parseInt(parts[parts.length - 3], 10))) {
             maxPrice = parseInt(parts[parts.length - 2], 10);
             minPrice = parseInt(parts[parts.length - 3], 10);
-            locationParts = parts.slice(1, parts.length - 3);
+            listingType = parts[parts.length - 4] as any;
+            locationParts = parts.slice(1, parts.length - 4);
           } else {
             maxPrice = parseInt(parts[parts.length - 2], 10);
-            locationParts = parts.slice(1, parts.length - 2);
+            listingType = parts[parts.length - 3] as any;
+            locationParts = parts.slice(1, parts.length - 3);
           }
-          const location = locationParts.join(' ');
+          const location = decodeURIComponent(locationParts.join('_'));
 
           if (!isNaN(maxPrice)) {
-            await ctx.reply(`🔍 Running your shared search: *${type}* in *${location}* between *${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()} ETB*...`, { parse_mode: 'Markdown' });
+            const listTypeStr = listingType === 'any' ? '' : `for *${listingType}* `;
+            await ctx.reply(`🔍 Running your shared search: *${type}* ${listTypeStr}in *${location}* between *${minPrice.toLocaleString()} - ${maxPrice.toLocaleString()} ETB*...`, { parse_mode: 'Markdown' });
             // Import here to avoid circular deps
             const { searchProperties } = require('../services/db');
             const { formatListing: fl } = require('../utils/formatting');
-            const results = await searchProperties(location, type, minPrice, maxPrice);
+            const results = await searchProperties(location, listingType, type, minPrice, maxPrice);
 
             if (results.length === 0) {
               await ctx.reply(`😔 No results found. Try a broader search — use /start to open the menu.`);
@@ -73,8 +76,8 @@ export const setupStartCommand = (bot: Telegraf<MyContext>) => {
                 const viewUrl = p.channel_message_id
                   ? `https://t.me/${primaryChannel}/${p.channel_message_id}`
                   : null;
-                if (p.images?.length > 0) {
-                  await ctx.replyWithPhoto(p.images[0], {
+                if (p.photos && p.photos.length > 0) {
+                  await ctx.replyWithPhoto(p.photos[0], {
                     caption, parse_mode: 'Markdown',
                     ...(viewUrl ? { reply_markup: { inline_keyboard: [[{ text: '👀 View Listing', url: viewUrl }]] } } : {}),
                   });
@@ -115,8 +118,8 @@ export const setupStartCommand = (bot: Telegraf<MyContext>) => {
         } else {
           for (const p of properties.slice(0, 5)) {
             const caption = formatListing(p);
-            if (p.images?.length > 0) {
-              await ctx.replyWithPhoto(p.images[0], { caption, parse_mode: 'Markdown' });
+            if (p.photos && p.photos.length > 0) {
+              await ctx.replyWithPhoto(p.photos[0], { caption, parse_mode: 'Markdown' });
             } else {
               await ctx.reply(caption, { parse_mode: 'Markdown' });
             }
@@ -142,8 +145,8 @@ export const setupStartCommand = (bot: Telegraf<MyContext>) => {
             ? `https://t.me/${primaryChannel}/${property.channel_message_id}`
             : null;
 
-          if (property.images?.length > 0) {
-            await ctx.replyWithPhoto(property.images[0], {
+          if (property.photos && property.photos.length > 0) {
+            await ctx.replyWithPhoto(property.photos[0], {
               caption, parse_mode: 'Markdown',
               ...(viewUrl ? { reply_markup: { inline_keyboard: [[{ text: '📢 View on Channel', url: viewUrl }]] } } : {}),
             });
@@ -199,8 +202,8 @@ export const setupStartCommand = (bot: Telegraf<MyContext>) => {
         ? `https://t.me/${primaryChannel}/${p.channel_message_id}`
         : null;
 
-      if (p.images?.length > 0) {
-        await ctx.replyWithPhoto(p.images[0], {
+      if (p.photos && p.photos.length > 0) {
+        await ctx.replyWithPhoto(p.photos[0], {
           caption, parse_mode: 'Markdown',
           ...(viewUrl ? { reply_markup: { inline_keyboard: [[{ text: '👀 View Full Listing', url: viewUrl }]] } } : {}),
         });

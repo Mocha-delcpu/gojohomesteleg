@@ -14,9 +14,10 @@ export const shortId = (uuid: string): string => {
 export const formatListing = (property: Property): string => {
   const id = shortId(property.id!);
   const bedroomLine = property.bedrooms > 0 ? `🛏 *Bedrooms:* ${property.bedrooms}\n` : '';
+  const typeStr = property.listing_type === 'rent' ? 'for Rent' : 'for Sale';
 
   return (
-    `🏠 *${property.property_type} for Rent/Sale*\n` +
+    `🏠 *${property.property_type} ${typeStr}*\n` +
     `📍 *Location:* ${property.location}\n` +
     `💰 *Price:* ${property.price.toLocaleString()} ETB\n` +
     `${bedroomLine}` +
@@ -34,25 +35,26 @@ export const channelPostButtons = (property: Property) => {
   const botUsername = process.env.BOT_USERNAME || 'gojohomes_bot';
   const loc = encodeURIComponent(property.location.toLowerCase().replace(/\s/g, ''));
   const type = property.property_type.toLowerCase();
+  const listingType = property.listing_type;
 
   return {
     inline_keyboard: [
       [
         {
           text: '💸 Find Cheaper Homes',
-          url: `https://t.me/${botUsername}?start=search_${loc}_0_${Math.floor(property.price * 0.8)}_${type}`,
+          url: `https://t.me/${botUsername}?start=search_${loc}_${listingType}_0_${Math.floor(property.price * 0.8)}_${type}`,
         },
       ],
       [
         {
-          text: `📍 Find Homes in ${property.location}`,
-          url: `https://t.me/${botUsername}?start=search_${loc}_0_999999_${type === 'any' ? 'any' : 'any'}`,
+          text: `📍 Find Homes in ${property.location.split(' - ').pop() || property.location}`,
+          url: `https://t.me/${botUsername}?start=search_${loc}_${listingType}_0_999999999_${type === 'any' ? 'any' : 'any'}`,
         },
       ],
       [
         {
           text: `🔍 Find Similar ${property.property_type}s`,
-          url: `https://t.me/${botUsername}?start=search_${loc}_${Math.max(0, property.price - 5000)}_${property.price + 5000}_${type}`,
+          url: `https://t.me/${botUsername}?start=search_${loc}_${listingType}_${Math.max(0, property.price - 5000)}_${property.price + 5000}_${type}`,
         },
       ],
     ],
@@ -62,11 +64,11 @@ export const channelPostButtons = (property: Property) => {
 /**
  * Builds a shareable search deep-link for a given search.
  */
-export const buildSearchLink = (location: string, minPrice: number, maxPrice: number, type: string): string => {
+export const buildSearchLink = (location: string, listingType: 'rent' | 'sale' | 'any', minPrice: number, maxPrice: number, type: string): string => {
   const botUsername = process.env.BOT_USERNAME || 'gojohomes_bot';
-  const loc = location.toLowerCase().replace(/\s/g, '');
+  const loc = encodeURIComponent(location.toLowerCase().replace(/\s/g, ''));
   const t = type.toLowerCase();
-  return `https://t.me/${botUsername}?start=search_${loc}_${minPrice}_${maxPrice}_${t}`;
+  return `https://t.me/${botUsername}?start=search_${loc}_${listingType}_${minPrice}_${maxPrice}_${t}`;
 };
 
 /**

@@ -35,5 +35,16 @@ export const am: TranslationDictionary = {
   price: 'ዋጋ',
   location: 'አካባቢ',
   description: 'ማብራሪያ',
-  contact: 'ስልክ ቁጥር'
+  contact: 'ስልክ ቁጥር',
+
+  // Rent vs Sale
+  listingTypePrompt: '📢 *ቤት ለማስገባት*\n\nይህ ቤት *ለኪራይ* ነው ወይስ *ለሽያጭ*?',
+  rent: 'ለኪራይ',
+  sale: 'ለሽያጭ',
+
+  // Location Hierarchy
+  selectRegion: '🗺 *ደረጃ 1 ከ 9 — አካባቢ*\n\nእባክዎ *ክልል* ይምረጡ:',
+  selectZone: '📍 *ክልሉ ተመዝግቧል!*\n\n*ከተማ/ክፍለ ከተማ* ይምረጡ:',
+  selectNeighborhood: '🏘 *ከተማው ተመዝግቧል!*\n\nየሚገኝበትን ልዩ *ሰፈር* ይምረጡ:',
+  selectedLocation: '✅ *አካባቢው ተመዝግቧል:*',
 };
