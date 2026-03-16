@@ -1,8 +1,12 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const telegraf_1 = require("telegraf");
 const env_1 = require("./config/env");
 const logger_1 = require("./utils/logger");
+const http_1 = __importDefault(require("http"));
 // Commands
 const start_1 = require("./commands/start");
 const admin_1 = require("./commands/admin");
@@ -47,6 +51,14 @@ bot.telegram.setMyCommands([
 ]).catch((err) => logger_1.logger.error('Failed to set commands:', err));
 bot.launch().then(() => {
     logger_1.logger.info('✅ Gojo Homes Bot is live!');
+});
+// ── Health-check server (keeps Render's free Web Service alive) ────────────
+const PORT = process.env.PORT || 3000;
+http_1.default.createServer((req, res) => {
+    res.writeHead(200);
+    res.end('🏠 Gojo Homes Bot is running!');
+}).listen(PORT, () => {
+    logger_1.logger.info(`🟢 Health-check server listening on port ${PORT}`);
 });
 // Enable graceful shutdown
 process.once('SIGINT', () => bot.stop('SIGINT'));

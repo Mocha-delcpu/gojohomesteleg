@@ -2,6 +2,7 @@ import { Telegraf, session } from 'telegraf';
 import { env } from './config/env';
 import { logger } from './utils/logger';
 import { MyContext } from './utils/types';
+import http from 'http';
 
 // Commands
 import { setupStartCommand } from './commands/start';
@@ -60,6 +61,15 @@ bot.telegram.setMyCommands([
 
 bot.launch().then(() => {
   logger.info('✅ Gojo Homes Bot is live!');
+});
+
+// ── Health-check server (keeps Render's free Web Service alive) ────────────
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('🏠 Gojo Homes Bot is running!');
+}).listen(PORT, () => {
+  logger.info(`🟢 Health-check server listening on port ${PORT}`);
 });
 
 // Enable graceful shutdown
